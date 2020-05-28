@@ -13,7 +13,6 @@ Functions:
 import os
 import stat
 from itertools import filterfalse
-from types import GenericAlias
 
 __all__ = ['clear_cache', 'cmp', 'dircmp', 'cmpfiles', 'DEFAULT_IGNORES']
 
@@ -48,23 +47,14 @@ def cmp(f1, f2, shallow=True):
     changes.  The cache may be cleared by calling clear_cache().
 
     """
-
-    s1 = _sig(os.stat(f1))
-    s2 = _sig(os.stat(f2))
-    if s1[0] != stat.S_IFREG or s2[0] != stat.S_IFREG:
-        return False
-    if shallow and s1 == s2:
+    file1 = open(f1,'r')
+    file2 = open(f2,'r')
+    file1String = file1.read().replace('\n', '').replace('\t','').replace(' ','')
+    file2String = file2.read().replace('\n', '').replace('\t','').replace(' ','')
+    if file1String == file2String:
         return True
-    if s1[1] != s2[1]:
-        return False
 
-    outcome = _cache.get((f1, f2, s1, s2))
-    if outcome is None:
-        outcome = _do_cmp(f1, f2)
-        if len(_cache) > 100:      # limit the maximum size of the cache
-            clear_cache()
-        _cache[f1, f2, s1, s2] = outcome
-    return outcome
+    return False
 
 def _sig(st):
     return (stat.S_IFMT(st.st_mode),
@@ -157,12 +147,12 @@ class dircmp:
             ok = 1
             try:
                 a_stat = os.stat(a_path)
-            except OSError:
+            except OSError as why:
                 # print('Can\'t stat', a_path, ':', why.args[1])
                 ok = 0
             try:
                 b_stat = os.stat(b_path)
-            except OSError:
+            except OSError as why:
                 # print('Can\'t stat', b_path, ':', why.args[1])
                 ok = 0
 
@@ -247,9 +237,6 @@ class dircmp:
             raise AttributeError(attr)
         self.methodmap[attr](self)
         return getattr(self, attr)
-
-    __class_getitem__ = classmethod(GenericAlias)
-
 
 def cmpfiles(a, b, common, shallow=True):
     """Compare common files in two directories.
